@@ -137,6 +137,8 @@ in_check(Color, Pieces) :-
 enemy(white, black).
 enemy(black, white).
 
+start_row(white,1).
+start_row(black,8).
 
 promotion_row(white,8).
 promotion_row(black,1).
@@ -149,7 +151,57 @@ promote_or_keep(Type, Player, (C,R), Rest, Pieces1) :-
     ;   Pieces1 = [piece(Type, Player, (C,R))|Rest]
     ).
 
+% Empty and not attacked checks 
+empty_sq(Pieces, (C,R)) :- \+ occupied((C,R), Pieces).
+
+sq_not_attacked(Player, Pieces, (C,R)) :-
+    enemy(Player, Enemy),
+    \+ attacked((C,R), Pieces, Enemy).
+
+%puts pieces into correct order after castle
+apply_castle(Pieces, Player, KingFrom, RookFrom, KingTo, RookTo, NewPieces) :-
+    select(piece(king, Player, KingFrom), Pieces, P1),
+    select(piece(rook, Player, RookFrom), P1, Rest),
+    NewPieces = [piece(king, Player, KingTo), piece(rook, Player, RookTo) | Rest].
+
+% castle king side(O-O)
+castle_kingside(Player, Pieces, NewPieces) :-
+    start_row(Player, Row),
+    % king and rook in position 
+    member(piece(king, Player, (5,Row)), Pieces),
+    member(piece(rook, Player, (8,Row)), Pieces),
+    %empty in between them while not attacked
+    empty_sq(Pieces, (6,Row)),
+    empty_sq(Pieces, (7,Row)),
+    \+ in_check(Player, Pieces),
+    sq_not_attacked(Player, Pieces, (6,Row)),
+    sq_not_attacked(Player, Pieces, (7,Row)),
+    apply_castle(Pieces, Player, (5,Row), (8,Row), (7,Row), (6,Row), NewPieces).
+
+% castle qeen side (O-O-O)
+castle_queenside(Player, Pieces, NewPieces) :-
+    start_row(Player, Row),
+    % king and rook in position 
+    member(piece(king, Player, (5,Row)), Pieces),
+    member(piece(rook, Player, (1,Row)), Pieces),
+    %empty in between them while not attacked
+    empty_sq(Pieces, (4,Row)),
+    empty_sq(Pieces, (3,Row)),
+    empty_sq(Pieces, (2,Row)),
+    \+ in_check(Player, Pieces),
+    sq_not_attacked(Player, Pieces, (4,Row)),
+    sq_not_attacked(Player, Pieces, (3,Row)),
+    apply_castle(Pieces, Player, (5,Row), (1,Row), (3,Row), (4,Row), NewPieces).
+
 % Generates all legal moves 
+% Start by trying out casteling
+move(state(Player, Pieces0), state(NextPlayer, PiecesC)) :-
+    canonical_pieces(Pieces0, Pieces),
+    enemy(Player, NextPlayer),
+    (castle_kingside(Player, Pieces, NewPieces);castle_queenside(Player, Pieces, NewPieces)),
+    canonical_pieces(NewPieces, PiecesC).
+
+% All other moves
 move(state(Player, Pieces0), state(NextPlayer, PiecesC)) :-
     canonical_pieces(Pieces0, Pieces),
     enemy(Player, NextPlayer),
@@ -238,16 +290,27 @@ sq_name((C,R), Name) :-
     LCode is 64 + C, char_code(L, LCode),
     format(atom(Name), '~w~w', [L, R]).
 
-print_path([_]).
-print_path([state(P,Bef), state(_,Aft)|Rest]) :-
-    moved_or_promo(P, Bef, Aft, Type, From, To, Promo),
-    sq_name(From, FromA), sq_name(To, ToA),
-    (   Promo = promo(NewType)->
-        format('~w moves ~w from ~w to ~w=~w~n', [P, Type, FromA, ToA, NewType]);
-        format('~w moves ~w from ~w to ~w~n', [P, Type, FromA, ToA])
+print_path([_]).  % last state has no move
+print_path([state(Player, Before), state(_, After)|Rest]) :-
+    (   % --- detect castling (king moved two files) ---
+        member(piece(king, Player, (C1,R)), Before),
+        member(piece(king, Player, (C2,R)), After),
+        abs(C2-C1) =:= 2
+    ->  ( C2 > C1
+        -> format('~w castles kingside (O-O)~n', [Player])
+        ;  format('~w castles queenside (O-O-O)~n', [Player])
+        )
+    ;   % --- normal move or promotion ---
+        moved_or_promo(Player, Before, After, Type, From, To, Promo),
+        sq_name(From, FromA), sq_name(To, ToA),
+        (   Promo = promo(NewType)
+        ->  format('~w moves ~w from ~w to ~w=~w~n',
+                   [Player, Type, FromA, ToA, NewType])
+        ;   format('~w moves ~w from ~w to ~w~n',
+                   [Player, Type, FromA, ToA])
+        )
     ),
-    print_path([state(_,Aft)|Rest]).
-
+    print_path([state(_, After)|Rest]).
 /*
 ?- solve(Path, 2, [
         piece(king, white, (3,3)),
@@ -309,5 +372,33 @@ print_path([state(P,Bef), state(_,Aft)|Rest]) :-
         piece(pawn, white, (1,6)),
         piece(king, black, (8, 8))
     ]).  
+
+? - solve(Path,2,[
+    piece(king,  white, (5,1)),
+    piece(rook,  white, (1,1)),
+    piece(rook,  white, (8,1)),
+    piece(bishop,white, (5,2)),
+    piece(knight,white, (6,6)),
+    piece(knight,white, (7,4)),
+    piece(pawn,  white, (1,2)),
+    piece(pawn,  white, (2,2)),
+    piece(pawn,  white, (3,2)),
+    piece(pawn,  white, (4,2)),
+    piece(pawn,  white, (6,2)),
+    piece(pawn,  white, (7,3)),
+    piece(pawn,  white, (8,4)),
+    piece(king,  black, (7,2)),
+    piece(queen, black, (5,7)),
+    piece(rook,  black, (1,8)),
+    piece(rook,  black, (6,8)),
+    piece(bishop,black, (2,7)),
+    piece(knight,black, (2,8)),
+    piece(pawn,  black, (1,7)),
+    piece(pawn,  black, (2,6)),
+    piece(pawn,  black, (3,7)),
+    piece(pawn,  black, (4,7)),
+    piece(pawn,  black, (5,6)),
+    piece(pawn,  black, (7,7))    
+    ]).
 
 */
