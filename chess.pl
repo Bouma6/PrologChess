@@ -202,35 +202,40 @@ solve(Path, MaxMoves, InitialPieces0) :-
     write('Solution found:'), nl,
     print_path(Path).
 
-%Printing the result.
+
+
+%Printing the result pretty
 print_path([_]).
 print_path([state(P,Bef), state(_,Aft)|Rest]) :-
     member(piece(T,P,(C2,R2)), Aft),
     \+ member(piece(T,P,(C2,R2)), Bef),
     member(piece(T,P,(C1,R1)), Bef),
     \+ member(piece(T,P,(C1,R1)), Aft),
-    format('~w moves ~w from (~w,~w) to (~w,~w)~n',[P,T,C1,R1,C2,R2]),
+    LCode1 is 64 + C1, char_code(L1, LCode1),
+    LCode2 is 64 + C2, char_code(L2, LCode2),
+    format('~w moves ~w from ~w~w to ~w~w~n',
+           [P, T, L1, R1, L2, R2]),
     print_path([state(_,Aft)|Rest]).
 /*
 ?- solve(Path, 2, [
         piece(king, white, (3,3)),
         piece(queen, white, (4,4)),
         piece(king, black, (1,1)),
-        piece(bishop, black, (2,1)),
-        piece(rook, black, (1,2))
+        piece(bishop, black, (1,2)),
+        piece(rook, black, (2,1))
     ]).
 
 ?- solve(Path, 1, [
-        piece(king, white, (5,6)),
-        piece(rook, white, (3,4)),
-        piece(king, black, (5,8))
+        piece(king, white, (6,5)),
+        piece(rook, white, (4,3)),
+        piece(king, black, (8,5))
     ]).
 
 ?- solve(Path, 4, [
         piece(king, white, (1,1)),
-        piece(rook, white, (1, 2)),
-        piece(rook, white, (2, 4)),
-        piece(king, black, (8, 5))
+        piece(rook, white, (2, 1)),
+        piece(rook, white, (4, 2)),
+        piece(king, black, (5, 8))
     ]).
 
 ?- solve(Path, 4, [
@@ -244,25 +249,26 @@ print_path([state(P,Bef), state(_,Aft)|Rest]) :-
         piece(knight, white, (3,3)),
         piece(king, black, (6, 6))
     ]).    
+    7 1 = g 1
 ?- solve(Path, 2, [
-        piece(king, white, (1,7)),
-        piece(pawn, white, (2,3)),
-        piece(pawn, white, (3,1)),
-        piece(pawn, white, (3,8)),
-        piece(knight, white, (3,6)),
-        piece(bishop, white, (3,5)),
-        piece(queen, white, (4,6)),
-        piece(pawn, white, (6,5)),
-        piece(rook, white, (7,3)),
-        piece(rook, black, (8,5)),
-        piece(pawn, black, (7,8)),
+        piece(king, white, (7,1)),
+        piece(pawn, white, (3,2)),
+        piece(pawn, white, (1,3)),
+        piece(pawn, white, (8,3)),
+        piece(knight, white, (6,3)),
+        piece(bishop, white, (5,3)),
+        piece(queen, white, (6,4)),
+        piece(pawn, white, (5,6)),
+        piece(rook, white, (3,7)),
+        piece(rook, black, (5,8)),
+        piece(pawn, black, (8,7)),
         piece(pawn, black, (7,7)),
-        piece(queen, black, (2,5)),
+        piece(queen, black, (5,2)),
         piece(bishop, black, (2,2)),
-        piece(bishop, black, (4,5)),
-        piece(pawn, black, (6,1)),
-        piece(pawn, black, (5,2)),
-        piece(pawn, black, (5,4)),
-        piece(king, black, (8, 7))
-    ]). 
+        piece(bishop, black, (5,4)),
+        piece(pawn, black, (1,6)),
+        piece(pawn, black, (2,5)),
+        piece(pawn, black, (4,5)),
+        piece(king, black, (7,8))
+    ]).
 */
