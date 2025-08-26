@@ -1,64 +1,66 @@
 % same square check
 pos(C,R):- between(1,8,C), between(1,8,R).
 
+enemy(white, black).
+enemy(black, white).
+
+start_row(white,1).
+start_row(black,8).
+
+promotion_row(white,8).
+promotion_row(black,1).
+
 % sort pieces so states compare equal even if order differs
 canonical_pieces(Ps,PsC):- msort(Ps,PsC).
-
 
 % Checks whether a position is occupied
 occupied((C,R), Pieces):- member(piece(_, _,(C,R)), Pieces).
 occupied((C,R), Pieces, Color) :- member(piece(_, Color, (C,R)), Pieces).
 
-% Controls whether a path between two positions is clear
-% But allow to capture on the last square
-path_clear((Col1,Row1), (Col2,Row2), Pieces) :-
-    DCol is sign(Col2 - Col1),
-    DRow is sign(Row2 - Row1),
-    path_clear_step((Col1,Row1), (Col2,Row2), (DCol,DRow), Pieces).
+% Helper functions 
+dir(DC,DR) :-member((DC,DR), [(1,0), (-1,0), (0,1), (0,-1)]).
+diag(DC,DR) :-member((DC,DR), [(1,1), (1,-1), (-1,1), (-1,-1)]).
+king_step(DC,DR) :- member((DC,DR),[(1,0),(1,1),(0,1),(-1,1),(-1,0),(-1,-1),(0,-1),(1,-1)]).
+knight_step(DC,DR) :- member((DC,DR),[(1,2),(2,1),(-1,2),(2,-1),(-2,1),(1,-2),(-1,-2),(-2,-1)]).
 
-path_clear_step((Col,Row), (Col2,Row2), _, _) :-
-    Col =:= Col2, Row =:= Row2, !.
-
-path_clear_step((Col,Row), (Col2,Row2), (DCol,DRow), Pieces) :-
-    NCol is Col + DCol, NRow is Row + DRow,
-    (NCol =:= Col2, NRow =:= Row2 -> true
-    ; \+ occupied((NCol,NRow), Pieces),
-    path_clear_step((NCol,NRow), (Col2,Row2), (DCol,DRow), Pieces)).
+slide_target(Player, Pieces, (C,R), DC, DR, (OutC,OutR)) :-
+    NC is C + DC,
+    NR is R + DR,
+    pos(NC, NR),
+    (occupied((NC,NR), Pieces, Player)->  fail
+    ;occupied((NC,NR), Pieces)->OutC = NC, OutR = NR 
+        ;(OutC = NC, OutR = NR;slide_target(Player, Pieces, (NC,NR), DC, DR, (OutC,OutR)))
+    ).
 
 % Legality of the moves 
-
 % King
-figure_move(king, _, (Col,Row), (NCol,NRow),_) :-
-    pos(NCol,NRow),
-    DCol is abs(Col-NCol), DRow is abs(Row-NRow),
-    DCol =< 1, DRow =< 1, (DCol > 0 ; DRow > 0).
+figure_move(king, Player, (C,R), (NC,NR), Pieces) :-
+    king_step(DC,DR),
+    NC is C+DC, NR is R+DR,
+    pos(NC,NR),
+    \+ occupied((NC,NR), Pieces, Player).
 
 % Rook
-figure_move(rook, _, (Col,Row), (NCol,NRow), Pieces) :-
-    pos(NCol,NRow),
-    (Col = NCol ; Row = NRow),
-    (Col \= NCol ; Row \= NRow),
-    path_clear((Col,Row), (NCol,NRow), Pieces).
+figure_move(rook, Player, From, To, Pieces) :-
+    dir(DC,DR),
+    slide_target(Player, Pieces, From, DC, DR, To).
 
 % Bishop
-figure_move(bishop, _, (Col,Row), (NCol,NRow), Pieces) :-
-    pos(NCol,NRow),
-    abs(Col-NCol) =:= abs(Row-NRow),
-    (Col \= NCol ; Row \= NRow),
-    path_clear((Col,Row), (NCol,NRow), Pieces).
+figure_move(bishop, Player, From, To, Pieces) :-
+    diag(DC,DR),
+    slide_target(Player, Pieces, From, DC, DR, To).
 
 % Queen
-figure_move(queen, _, (Col,Row), (NCol,NRow), Pieces) :-
-    pos(NCol,NRow),
-    ( Col = NCol ; Row = NRow ; abs(Col-NCol) =:= abs(Row-NRow) ),
-    (Col \= NCol ; Row \= NRow),
-    path_clear((Col,Row), (NCol,NRow), Pieces).
+figure_move(queen, Player, From, To, Pieces) :-
+    ( dir(DC,DR) ; diag(DC,DR) ),
+    slide_target(Player, Pieces, From, DC, DR, To).
 
-% Knight 
-figure_move(knight, _, (Col,Row), (NCol,NRow), _) :-
-    pos(NCol,NRow),
-    DCol is abs(Col-NCol), DRow is abs(Row-NRow),
-    ( (DCol =:= 2, DRow =:= 1) ; (DCol =:= 1, DRow =:= 2) ).
+% Knight
+figure_move(knight, Player, (C,R), (NC,NR), Pieces) :-
+    knight_step(DC,DR),
+    NC is C+DC, NR is R+DR,
+    pos(NC,NR),
+    \+ occupied((NC,NR), Pieces, Player).
 
 % Pawn white
 figure_move(pawn, white, (Col,Row), (Col,NRow), Pieces) :-
@@ -77,7 +79,6 @@ figure_move(pawn, white, (Col,Row), (NCol,NRow), Pieces) :-
     occupied((NCol,NRow), Pieces, black).
 
 % Pawn black
-
 figure_move(pawn, black, (Col,Row), (Col,NRow), Pieces) :-           
     NRow is Row-1, pos(Col,NRow),
     \+ occupied((Col,NRow), Pieces).
@@ -94,33 +95,10 @@ figure_move(pawn, black, (Col,Row), (NCol,NRow), Pieces) :-
     occupied((NCol,NRow), Pieces, white).
 
 % controls whether a piece is under attack
-attacks(king, _, (Col,Row), (NCol,NRow), _) :-
-    pos(NCol,NRow),
-    DCol is abs(Col-NCol), DRow is abs(Row-NRow),
-    DCol =< 1, DRow =< 1, (DCol>0 ; DRow>0).
-
-attacks(rook, _, From, To, Pieces)   :- From \= To, same_line(From, To),   path_clear(From, To, Pieces).
-attacks(bishop, _, From, To, Pieces) :- From \= To, diagonal(From, To),     path_clear(From, To, Pieces).
-attacks(queen, _, From, To, Pieces)  :- From \= To, (same_line(From, To) ; diagonal(From, To)), path_clear(From, To, Pieces).
-
-
-attacks(knight, _, (Col,Row), (NCol,NRow), _) :-
-    pos(NCol,NRow),
-    DCol is abs(Col-NCol), DRow is abs(Row-NRow),
-    ( (DCol =:= 2, DRow =:= 1) ; (DCol =:= 1, DRow =:= 2) ).
-
-attacks(pawn, white, (Col,Row), (NCol,NRow), _) :-
-    NRow is Row+1, (NCol is Col+1 ; NCol is Col-1), pos(NCol,NRow).
-attacks(pawn, black, (Col,Row), (NCol,NRow), _) :-
-    NRow is Row-1, (NCol is Col+1 ; NCol is Col-1), pos(NCol,NRow).
-
 attacked((C,R), Pieces, AttackingColor) :-
     member(piece(Type, AttackingColor, From), Pieces),
-    attacks(Type, AttackingColor, From, (C,R), Pieces).
+    figure_move(Type, AttackingColor, From, (C,R), Pieces).
     
-same_line((C,R1),(C,R2)) :- R1 \= R2.
-same_line((C1,R),(C2,R)) :- C1 \= C2.
-diagonal((C1,R1),(C2,R2)) :- abs(C1-C2) =:= abs(R1-R2).
 
 % Remove piece at Pos if present
 capture_at(_, [], []).
@@ -128,20 +106,12 @@ capture_at(Pos, [piece(_,_,Pos)|T], T) :- !.
 capture_at(Pos, [H|T], [H|NT]) :- capture_at(Pos, T, NT).
 
 
-% check if is side king in check
+% check if is sides king in check
 in_check(Color, Pieces) :-
     member(piece(king, Color, KP), Pieces),
     enemy(Color, Enemy),
     attacked(KP, Pieces, Enemy).
 
-enemy(white, black).
-enemy(black, white).
-
-start_row(white,1).
-start_row(black,8).
-
-promotion_row(white,8).
-promotion_row(black,1).
 
 % If a pawn is at promotion square => promote else keep
 promote_or_keep(Type, Player, (C,R), Rest, Pieces1) :-
@@ -258,17 +228,56 @@ can_mate_white(N, state(white, Pieces), Visited) :-
     all_responses_win(BlackResponses, N-1, [StateAfterWhite|Visited])
     ).
 
+% Draw checking 
+count_type(Color, Type, Pieces, N) :-
+    include(=(piece(Type, Color, _)), Pieces, L),
+    length(L, N).
+
+
+no_mating_piece(Pieces) :-
+    \+ ( member(piece(queen, _, _), Pieces); member(piece(rook,  _, _), Pieces); member(piece(pawn, _, _), Pieces)).
+
+minor_counts(Pieces, (BW,NW,BB,NB)) :-
+    count_type(white, bishop, Pieces, BW),
+    count_type(white, knight, Pieces, NW),
+    count_type(black, bishop, Pieces, BB),
+    count_type(black, knight, Pieces, NB).
+
+
+insufficient_material(Pieces) :-
+    no_mating_piece(Pieces),
+    minor_counts(Pieces, (BW,NW,BB,NB)),
+    Sum is BW+NW+BB+NB,
+    (Sum =:= 0;Sum =:= 1;Sum =:= 2,
+        ((NW =:= 2, BW =:= 0, BB =:= 0, NB =:= 0)
+        ;(NB =:= 2, BB =:= 0, BW =:= 0, NW =:= 0)
+        ;(BW =:= 1, BB =:= 1, NW =:= 0, NB =:= 0)
+        ;(NW =:= 1, NB =:= 1, BW =:= 0, BB =:= 0)
+        ;((BW =:= 1, NB =:= 1, NW =:= 0, BB =:= 0)
+        ;(NW =:= 1, BB =:= 1, BW =:= 0, NB =:= 0))
+        )
+    ).
+
+is_stalemate(state(Player, Pieces)) :-
+    \+ in_check(Player, Pieces),
+    \+ move(state(Player, Pieces), _).
+
+guaranteed_draw_initial(state(Player, Pieces)) :-
+    insufficient_material(Pieces)
+    ;is_stalemate(state(Player, Pieces)).
 % Path is a forward list of states from start (white to move) to final mate state (black to move).
 solve(Path, MaxMoves, InitialPieces0) :-
     canonical_pieces(InitialPieces0, InitialPieces),
     Max1 is MaxMoves-1,
-    forced_mate_white(Max1, state(white, InitialPieces), [state(white, InitialPieces)], Path),
-    write('Solution found:'), nl,
-    print_path(Path).
+    (guaranteed_draw_initial(state(white, InitialPieces))->writeln('It can only be a draw.'),Path = []
+    ;once(forced_mate_white(Max1,state(white, InitialPieces),[state(white, InitialPieces)], Path)),
+    writeln('Solution found:'),
+    print_path(Path)
+    ).
 
 % Find a moved piece between two states:
 % 1) normal move same Type before and after
-% 2) promotion pawn -> queen,rook,bishop,knight
+% 2) promotion pawn => queen,rook,bishop,knight
 moved_or_promo(Player, Before, After, Type, (C1,R1), (C2,R2), Promo) :-
     % try normal move first
     member(piece(Type, Player, (C2,R2)), After),
@@ -311,6 +320,7 @@ print_path([state(Player, Before), state(_, After)|Rest]) :-
         )
     ),
     print_path([state(_, After)|Rest]).
+
 /*
 ?- solve(Path, 2, [
         piece(king, white, (3,3)),
