@@ -21,9 +21,10 @@ Ak riešenie existuje, vypíše postupnosť ťahov.
 - Path – unifikuje sa so zoznamom stavov od začiatku po finálny mat (pre zobrazenie sa použije vstavaný výpis).
 Pri úspechu vytlačí sekvenciu ťahov vo formáte:
 ```
-white moves rook from (3,4) to (3,8)
-black moves king from (5,8) to (4,8)
-white moves rook from (3,8) to (4,8)
+Solution found:
+white moves king from C3 to C2
+black moves rook from B1 to B2
+white moves queen from D4 to B2
 ```
 
 ### Príklady dotazov
