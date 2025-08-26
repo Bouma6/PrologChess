@@ -36,7 +36,7 @@ white moves rook from (3,8) to (4,8)
 ```
 
 Ak riešenie neexistuje program vypíše false lebo nenájde žiadne riešenie.
-Ak jednoznačné že hra skončí remízou - čierny neni v šachu a nemože sa pohnúť/na šachovnici sú iba figúrky ktoré nevedia vynútiť šach mat bude vypísane že hra skončí remízou.
+Ak jednoznačné že hra skončí remízou - biely na začiatku neni v šachu a nemože sa pohnúť/na šachovnici sú iba figúrky ktoré nevedia vynútiť šach mat bude vypísane že hra skončí remízou.
 Pokial ale je pat vynútení až po viacerých tahoch tak program jednoducho vypíše false(vynútený mat nenájedný).
 
 
