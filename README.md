@@ -36,6 +36,8 @@ white moves rook from (3,8) to (4,8)
 ```
 
 Ak riešenie neexistuje program vypíše false lebo nenájde žiadne riešenie.
+Ak jednoznačné že hra skončí remízou - čierny neni v šachu a nemože sa pohnúť/na šachovnici sú iba figúrky ktoré nevedia vynútiť šach mat bude vypísane že hra skončí remízou.
+Pokial ale je pat vynútení až po viacerých tahoch tak program jednoducho vypíše false(vynútený mat nenájedný).
 
 
 # Programátorská dokumentácia
@@ -46,7 +48,6 @@ Ak riešenie neexistuje program vypíše false lebo nenájde žiadne riešenie.
   - ```figure_move/5``` – legálne ťahy (rešpektujú pravidlá pohybu, obsadenie cieľa vlastnou farbou sa filtruje neskôr).
   - ```move/2``` – generuje legálne ťahy: vykoná presun + prípadné braní, overí, že vlastný kráľ nie je v šachu po ťahu.
 - Šach/Mat:
-  - ```attacks/5``` – útoky pre detekciu šachu (pešiaci útočia diagonálne).
   - ```in_check/2``` – kráľ danej farby je napadnutý.
   - ```is_mate/1``` – čierny je v šachu a nemá žiadny legálny ťah.
 ## Vynútený mat v N (hĺbkovo limitovaný)
