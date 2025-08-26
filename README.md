@@ -38,6 +38,7 @@ white moves rook from (3,8) to (4,8)
 Ak riešenie neexistuje program vypíše false lebo nenájde žiadne riešenie.
 Ak jednoznačné že hra skončí remízou - biely na začiatku neni v šachu a nemože sa pohnúť/na šachovnici sú iba figúrky ktoré nevedia vynútiť šach mat bude vypísane že hra skončí remízou.
 Pokial ale je pat vynútení až po viacerých tahoch tak program jednoducho vypíše false(vynútený mat nenájedný).
+Program podporuje promócie pešiakov a rošády
 
 
 # Programátorská dokumentácia
@@ -65,7 +66,6 @@ Pokial ale je pat vynútení až po viacerých tahoch tak program jednoducho vyp
 
 
  <img src="Screenshot 2025-08-24 at 14.41.30.png" alt="App Screenshot" width="1600"/>
-<img src="Screenshot 2025-08-24 at 14.41.36.png" alt="App Screenshot" width="1600"/>
 <img src="Screenshot 2025-08-24 at 14.41.48.png" alt="App Screenshot" width="1600"/>
 <img src="Screenshot 2025-08-24 at 14.41.42.png" alt="App Screenshot" width="1600"/>
 <img src="Screenshot 2025-08-24 at 14.41.53.png" alt="App Screenshot" width="1600"/>
