@@ -64,8 +64,12 @@ Program podporuje promócie pešiakov a rošády
 
 
 
+<img src="stealthmate.png" alt="App Screenshot" width="1600"/>
+<img src="example1.png" alt="App Screenshot" width="1600"/>
+<img src="example2.png" alt="App Screenshot" width="1600"/>
+<img src="example3.png" alt="App Screenshot" width="1600"/>
+<img src="examplereal.png" alt="App Screenshot" width="1600"/>
+<img src="stealthmate.png" alt="App Screenshot" width="1600"/>
+<img src="promotion.png" alt="App Screenshot" width="1600"/>
+<img src="castle.png" alt="App Screenshot" width="1600"/>
 
- <img src="Screenshot 2025-08-24 at 14.41.30.png" alt="App Screenshot" width="1600"/>
-<img src="Screenshot 2025-08-24 at 14.41.48.png" alt="App Screenshot" width="1600"/>
-<img src="Screenshot 2025-08-24 at 14.41.42.png" alt="App Screenshot" width="1600"/>
-<img src="Screenshot 2025-08-24 at 14.41.53.png" alt="App Screenshot" width="1600"/>
