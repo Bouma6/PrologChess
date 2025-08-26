@@ -137,6 +137,18 @@ in_check(Color, Pieces) :-
 enemy(white, black).
 enemy(black, white).
 
+
+promotion_row(white,8).
+promotion_row(black,1).
+
+% If a pawn is at promotion square => promote else keep
+promote_or_keep(Type, Player, (C,R), Rest, Pieces1) :-
+    ( Type = pawn, promotion_row(Player, R) ->
+        member(PType, [queen, rook, bishop, knight]),
+        Pieces1 = [piece(PType, Player, (C,R))|Rest]
+    ;   Pieces1 = [piece(Type, Player, (C,R))|Rest]
+    ).
+
 % Generates all legal moves 
 move(state(Player, Pieces0), state(NextPlayer, PiecesC)) :-
     canonical_pieces(Pieces0, Pieces),
@@ -149,9 +161,9 @@ move(state(Player, Pieces0), state(NextPlayer, PiecesC)) :-
     % remove captured enemy if any                         
     capture_at(NewPos, Pieces, Temp1),
     select(piece(Type, Player, Pos), Temp1, Rest),
-    Pieces1 = [piece(Type, Player, NewPos)|Rest],
+    promote_or_keep(Type, Player, NewPos, Rest, Pieces1),
     % own king not in check after move
-    \+ in_check(Player, Pieces1),                    
+    \+ in_check(Player, Pieces1),          
     canonical_pieces(Pieces1, PiecesC).
 
 % Mate detection
@@ -197,25 +209,45 @@ can_mate_white(N, state(white, Pieces), Visited) :-
 % Path is a forward list of states from start (white to move) to final mate state (black to move).
 solve(Path, MaxMoves, InitialPieces0) :-
     canonical_pieces(InitialPieces0, InitialPieces),
-    Max1 is MaxMoves - 1,
+    Max1 is MaxMoves-1,
     forced_mate_white(Max1, state(white, InitialPieces), [state(white, InitialPieces)], Path),
     write('Solution found:'), nl,
     print_path(Path).
 
+% Find a moved piece between two states:
+% 1) normal move same Type before and after
+% 2) promotion pawn -> queen,rook,bishop,knight
+moved_or_promo(Player, Before, After, Type, (C1,R1), (C2,R2), Promo) :-
+    % try normal move first
+    member(piece(Type, Player, (C2,R2)), After),
+    \+ member(piece(Type, Player, (C2,R2)), Before),
+    member(piece(Type, Player, (C1,R1)), Before),
+    \+ member(piece(Type, Player, (C1,R1)), After),
+    Promo = none.
 
+moved_or_promo(Player, Before, After, pawn, (C1,R1), (C2,R2), promo(NewType)) :-
+    % promotion => After has NewType at To, Before had a pawn at From
+    member(piece(NewType, Player, (C2,R2)), After),
+    NewType \= pawn,
+    \+ member(piece(_, Player, (C2,R2)), Before),
+    member(piece(pawn, Player, (C1,R1)), Before),
+    \+ member(piece(_, Player, (C1,R1)), After).
 
-%Printing the result pretty
+% square name changer to pretty (C,R) -> A1..H8
+sq_name((C,R), Name) :-
+    LCode is 64 + C, char_code(L, LCode),
+    format(atom(Name), '~w~w', [L, R]).
+
 print_path([_]).
 print_path([state(P,Bef), state(_,Aft)|Rest]) :-
-    member(piece(T,P,(C2,R2)), Aft),
-    \+ member(piece(T,P,(C2,R2)), Bef),
-    member(piece(T,P,(C1,R1)), Bef),
-    \+ member(piece(T,P,(C1,R1)), Aft),
-    LCode1 is 64 + C1, char_code(L1, LCode1),
-    LCode2 is 64 + C2, char_code(L2, LCode2),
-    format('~w moves ~w from ~w~w to ~w~w~n',
-           [P, T, L1, R1, L2, R2]),
+    moved_or_promo(P, Bef, Aft, Type, From, To, Promo),
+    sq_name(From, FromA), sq_name(To, ToA),
+    (   Promo = promo(NewType)->
+        format('~w moves ~w from ~w to ~w=~w~n', [P, Type, FromA, ToA, NewType]);
+        format('~w moves ~w from ~w to ~w~n', [P, Type, FromA, ToA])
+    ),
     print_path([state(_,Aft)|Rest]).
+
 /*
 ?- solve(Path, 2, [
         piece(king, white, (3,3)),
@@ -271,4 +303,11 @@ print_path([state(P,Bef), state(_,Aft)|Rest]) :-
         piece(pawn, black, (4,5)),
         piece(king, black, (7,8))
     ]).
+?- solve(Path, 2, [
+        piece(king, white, (1,1)),
+        piece(rook, white, (2,7)),
+        piece(pawn, white, (1,6)),
+        piece(king, black, (8, 8))
+    ]).  
+
 */
