@@ -17,7 +17,7 @@ canonical_pieces(Ps,PsC):- msort(Ps,PsC).
 occupied((C,R), Pieces):- member(piece(_, _,(C,R)), Pieces).
 occupied((C,R), Pieces, Color) :- member(piece(_, Color, (C,R)), Pieces).
 
-% Helper functions 
+% Helper functions for figure_move
 dir(DC,DR) :-member((DC,DR), [(1,0), (-1,0), (0,1), (0,-1)]).
 diag(DC,DR) :-member((DC,DR), [(1,1), (1,-1), (-1,1), (-1,-1)]).
 king_step(DC,DR) :- member((DC,DR),[(1,0),(1,1),(0,1),(-1,1),(-1,0),(-1,-1),(0,-1),(1,-1)]).
@@ -33,62 +33,62 @@ slide_target(Player, Pieces, (C,R), DC, DR, (OutC,OutR)) :-
     ).
 
 % Legality of the moves 
-% King
+% King moves
 figure_move(king, Player, (C,R), (NC,NR), Pieces) :-
     king_step(DC,DR),
     NC is C+DC, NR is R+DR,
     pos(NC,NR),
     \+ occupied((NC,NR), Pieces, Player).
 
-% Rook
+% Rook moves
 figure_move(rook, Player, From, To, Pieces) :-
     dir(DC,DR),
     slide_target(Player, Pieces, From, DC, DR, To).
 
-% Bishop
+% Bishop moves
 figure_move(bishop, Player, From, To, Pieces) :-
     diag(DC,DR),
     slide_target(Player, Pieces, From, DC, DR, To).
 
-% Queen
+% Queen moves
 figure_move(queen, Player, From, To, Pieces) :-
     ( dir(DC,DR) ; diag(DC,DR) ),
     slide_target(Player, Pieces, From, DC, DR, To).
 
-% Knight
+% Knight moves
 figure_move(knight, Player, (C,R), (NC,NR), Pieces) :-
     knight_step(DC,DR),
     NC is C+DC, NR is R+DR,
     pos(NC,NR),
     \+ occupied((NC,NR), Pieces, Player).
 
-% Pawn white
+% Pawn white moves
 figure_move(pawn, white, (Col,Row), (Col,NRow), Pieces) :-
     NRow is Row+1, pos(Col,NRow),
     \+ occupied((Col,NRow), Pieces).
-
+% Two forward when starting
 figure_move(pawn, white, (Col,Row), (Col,NRow), Pieces) :-           
     Row =:= 2, NRow is Row+2, pos(Col,NRow),
     Mid is Row+1,
     \+ occupied((Col,Mid), Pieces),
     \+ occupied((Col,NRow), Pieces).
-
+% Capture 
 figure_move(pawn, white, (Col,Row), (NCol,NRow), Pieces) :-          
     NRow is Row+1, (NCol is Col+1 ; NCol is Col-1),
     pos(NCol,NRow),
     occupied((NCol,NRow), Pieces, black).
 
-% Pawn black
+% Pawn black moves
 figure_move(pawn, black, (Col,Row), (Col,NRow), Pieces) :-           
     NRow is Row-1, pos(Col,NRow),
     \+ occupied((Col,NRow), Pieces).
-
+% Two forward when starting
 figure_move(pawn, black, (Col,Row), (Col,NRow), Pieces) :-           
     Row =:= 7, NRow is Row-2, pos(Col,NRow),
     Mid is Row-1,
     \+ occupied((Col,Mid), Pieces),
     \+ occupied((Col,NRow), Pieces).
-
+% Capture 
 figure_move(pawn, black, (Col,Row), (NCol,NRow), Pieces) :-          
     NRow is Row-1, (NCol is Col+1 ; NCol is Col-1),
     pos(NCol,NRow),
@@ -123,7 +123,6 @@ promote_or_keep(Type, Player, (C,R), Rest, Pieces1) :-
 
 % Empty and not attacked checks 
 empty_sq(Pieces, (C,R)) :- \+ occupied((C,R), Pieces).
-
 sq_not_attacked(Player, Pieces, (C,R)) :-
     enemy(Player, Enemy),
     \+ attacked((C,R), Pieces, Enemy).
@@ -148,13 +147,13 @@ castle_kingside(Player, Pieces, NewPieces) :-
     sq_not_attacked(Player, Pieces, (7,Row)),
     apply_castle(Pieces, Player, (5,Row), (8,Row), (7,Row), (6,Row), NewPieces).
 
-% castle qeen side (O-O-O)
+% castle queen side (O-O-O)
 castle_queenside(Player, Pieces, NewPieces) :-
     start_row(Player, Row),
     % king and rook in position 
     member(piece(king, Player, (5,Row)), Pieces),
     member(piece(rook, Player, (1,Row)), Pieces),
-    %empty in between them while not attacked
+    % empty in between them while not attacked
     empty_sq(Pieces, (4,Row)),
     empty_sq(Pieces, (3,Row)),
     empty_sq(Pieces, (2,Row)),
@@ -228,22 +227,23 @@ can_mate_white(N, state(white, Pieces), Visited) :-
     all_responses_win(BlackResponses, N-1, [StateAfterWhite|Visited])
     ).
 
-% Draw checking 
+% Draw control 
 count_type(Color, Type, Pieces, N) :-
     include(=(piece(Type, Color, _)), Pieces, L),
     length(L, N).
 
-
+% pieces with which it is always possible to mate
 no_mating_piece(Pieces) :-
     \+ ( member(piece(queen, _, _), Pieces); member(piece(rook,  _, _), Pieces); member(piece(pawn, _, _), Pieces)).
 
+% pieces with which it is not always possible to mate
 minor_counts(Pieces, (BW,NW,BB,NB)) :-
     count_type(white, bishop, Pieces, BW),
     count_type(white, knight, Pieces, NW),
     count_type(black, bishop, Pieces, BB),
     count_type(black, knight, Pieces, NB).
 
-
+%States where draw is forced 
 insufficient_material(Pieces) :-
     no_mating_piece(Pieces),
     minor_counts(Pieces, (BW,NW,BB,NB)),
@@ -258,13 +258,16 @@ insufficient_material(Pieces) :-
         )
     ).
 
+% Check for Stalemate
 is_stalemate(state(Player, Pieces)) :-
     \+ in_check(Player, Pieces),
     \+ move(state(Player, Pieces), _).
 
+%check instant draw 
 guaranteed_draw_initial(state(Player, Pieces)) :-
     insufficient_material(Pieces)
     ;is_stalemate(state(Player, Pieces)).
+    
 % Path is a forward list of states from start (white to move) to final mate state (black to move).
 solve(Path, MaxMoves, InitialPieces0) :-
     canonical_pieces(InitialPieces0, InitialPieces),
@@ -301,7 +304,7 @@ sq_name((C,R), Name) :-
 
 print_path([_]).  % last state has no move
 print_path([state(Player, Before), state(_, After)|Rest]) :-
-    (   % --- detect castling (king moved two files) ---
+    (   % detect castling (king moved two files)
         member(piece(king, Player, (C1,R)), Before),
         member(piece(king, Player, (C2,R)), After),
         abs(C2-C1) =:= 2
@@ -309,7 +312,7 @@ print_path([state(Player, Before), state(_, After)|Rest]) :-
         -> format('~w castles kingside (O-O)~n', [Player])
         ;  format('~w castles queenside (O-O-O)~n', [Player])
         )
-    ;   % --- normal move or promotion ---
+    ;   % normal move or promotion
         moved_or_promo(Player, Before, After, Type, From, To, Promo),
         sq_name(From, FromA), sq_name(To, ToA),
         (   Promo = promo(NewType)
